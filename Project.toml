@@ -1,0 +1,4 @@
+name = "Bond"
+uuid = "5658bb42-3926-49ff-8eca-a60599239f2a"
+authors = ["Evžen Wybitul <wybitul.evzen@gmail.com>"]
+version = "0.1.0"
