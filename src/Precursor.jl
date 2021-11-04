@@ -1,46 +1,55 @@
 module Precursor
 
-function match_precursor!(digestides, index, target_mass, segments, solutions)
-    if target_mass ≈ 0
-        push!(solutions, digestides[segments])
-    elseif target_mass < 0 || index == length(digestides) + 1
+function go!(
+    objects,
+    index,
+    remaining_mass,
+    remaining_segments,
+    start_segment,
+    chosen,
+    solutions,
+)
+    if remaining_mass ≈ 0
+        push!(solutions, objects[chosen])
+    elseif remaining_mass < 0 || index == length(objects) + 1
         solutions
     else
-        match_precursor!(digestides, index + 1, target_mass, segments, solutions)
-        match_precursor!(
-            digestides,
+        if remaining_segments > 0 && !start_segment
+            for beginning = (index+1):length(objects)
+                go!(
+                    objects,
+                    beginning,
+                    remaining_mass,
+                    remaining_segments,
+                    true,
+                    chosen,
+                    solutions,
+                )
+            end
+        end
+
+        go!(
+            objects,
             index + 1,
-            target_mass - digestides[index].mass,
-            push!(segments, index),
+            remaining_mass - objects[index].mass,
+            remaining_segments - start_segment,
+            false,
+            push!(chosen, index),
             solutions,
         )
-        pop!(segments)
+        pop!(chosen)
         solutions
     end
 end
 
-function subset_sum(objects, target_mass)
-    function go!(index, remaining_mass, chosen, solutions)
-        if remaining_mass ≈ 0
-            push!(solutions, objects[chosen])
-        elseif remaining_mass < 0 || index == length(objects) + 1
-            solutions
-        else
-            go!(index + 1, remaining_mass, chosen, solutions)
-            go!(
-                index + 1,
-                remaining_mass - objects[index].mass,
-                push!(chosen, index),
-                solutions,
-            )
-            pop!(chosen)
-            solutions
-        end
-    end
-
-    chosen = []
+function subset_sum(objects::Objects, target_mass, segments) where Objects
+    solutions = Objects[]
+    chosen = UInt16[]
     sizehint!(chosen, length(objects))
-    go!(1, target_mass, chosen, [])
+    for beginning = 1:length(objects)
+        go!(objects, beginning, target_mass, segments - 1, true, chosen, solutions)
+    end
+    solutions
 end
 
 
