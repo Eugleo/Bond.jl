@@ -1,5 +1,7 @@
 module Bond
 
-greet() = print("Hello World!")
+export greet
+
+greet() = "Hello World!"
 
 end # module
