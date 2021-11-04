@@ -1,9 +1,6 @@
-using Test, Bond
+using Test
 
 include("../src/Mass.jl")
-
-@test greet() == "Hello World!"
-
 
 @testset "Mass tests" begin
     @testset "Atomic and molecular weights" begin
