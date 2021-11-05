@@ -5,3 +5,6 @@ version = "0.1.0"
 
 [deps]
 FASTX = "c2308a5c-f048-11e8-3e8a-31650f418d12"
+
+[compat]
+FASTX = "1"
