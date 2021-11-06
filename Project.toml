@@ -4,4 +4,5 @@ authors = ["Evžen Wybitul <wybitul.evzen@gmail.com>"]
 version = "0.1.0"
 
 [deps]
+BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 FASTX = "c2308a5c-f048-11e8-3e8a-31650f418d12"
