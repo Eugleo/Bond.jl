@@ -1,35 +1,6 @@
 module Mass
 
-include("Types.jl")
-
 export mass
-
-# Source: pyteomics' mass module
-AMINO_ACID_MASS = Dict(
-    'G' => 57.02146,
-    'A' => 71.03711,
-    'S' => 87.03203,
-    'P' => 97.05276,
-    'V' => 99.06841,
-    'T' => 101.04768,
-    'C' => 103.00919,
-    'L' => 113.08406,
-    'I' => 113.08406,
-    'J' => 113.08406,
-    'N' => 114.04293,
-    'D' => 115.02694,
-    'Q' => 128.05858,
-    'K' => 128.09496,
-    'E' => 129.04259,
-    'M' => 131.04049,
-    'H' => 137.05891,
-    'F' => 147.06841,
-    'U' => 150.95364,
-    'R' => 156.10111,
-    'Y' => 163.06333,
-    'W' => 186.07931,
-    'O' => 237.14773,
-)
 
 # Source: https://www.unimod.org/masses.html
 ATOMIC_WEIGHT = Dict(
@@ -73,41 +44,8 @@ ATOMIC_WEIGHT = Dict(
     "Hg" => 201.970617,
 )
 
-
 function get_count(count_str)
     isnothing(count_str) ? 1 : parse(Int, count_str)
-end
-
-function mass(formula::AbstractString)
-    element = nothing
-    count_str = nothing
-    total = 0
-
-    for ch in formula
-        if isuppercase(ch)
-            # Beginning of a new element
-
-            if !isnothing(element)
-                # Add the mass of the last element
-                total += ATOMIC_WEIGHT[element] * get_count(count_str)
-            end
-
-            element = string(ch)
-            count_str = nothing
-        elseif islowercase(ch)
-            # Continue building the element name
-            element *= ch
-        elseif isdigit(ch)
-            # Start building the count, or continue with building the current one
-            count_str = isnothing(count_str) ? string(ch) : count_str * ch
-        end
-    end
-    total + ATOMIC_WEIGHT[element] * get_count(count_str)
-end
-
-function mass(protein::Types.Protein)
-    ends = mass("H2") + mass("O")
-    sum(amino_acid -> AMINO_ACID_MASS[amino_acid], protein.sequence) + ends
 end
 
 function mass(formula::AbstractString)
