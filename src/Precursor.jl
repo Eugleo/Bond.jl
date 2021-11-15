@@ -43,17 +43,18 @@ function compute_step!(objects, table; to)
     table
 end
 
-function show_solutions(table, objects, segments, alkylation_mass)
+function show_solutions(table, objects, segments, alkylation_mass, mods)
     result = DataFrame()
 
-    for (segments_left, free_cysteines, path) in walk(table, objects, segments, alkylation_mass)
+    for (segments_left, free_cysteines, modname, path) in walk(table, objects, segments, alkylation_mass, mods)
         push!(
             result,
             Dict(
                 "segments" => segments - segments_left,
                 "total_cysteines" => sum(i -> i.cysteines, objects[path]),
                 "free_cysteines" => free_cysteines,
-                "selected" => join([(k in path) ? "X" : "_" for k in 1:length(objects)])
+                "selected" => join([(k in path) ? "X" : "_" for k in 1:length(objects)]),
+                "modifications" => modname
             ),
             cols = :union
         )
@@ -62,21 +63,41 @@ function show_solutions(table, objects, segments, alkylation_mass)
     result
 end
 
+function modifications(object, mod)
+    object.mods
+end
+
+function compute_modification_steps(masses, bounds)
+    [
+        (ns, sum(ns))
+        for ns in Base.product([(0:bounds[mod]) .* m for (mod, m) in masses]...)
+    ]
+end
+
 # TODO: Implementovat modifikace — prostě se bude procházet tabulka z jiné vrstvy než mass = 0
-# Bude to fungovat dobře pro nízký-ish počet modfifikací
-function walk(table, objects, segments, alkylation_mass)
+function walk(table, objects, segments, alkylation_mass, modification_masses)
     solutions = []
+
+    mod_bounds = Dict()
+    for mod in keys(modification_masses)
+        mod_bounds[mod] = sum(o -> modifications(o, mod), objects)
+    end
+
+    modifiers = compute_modification_steps(modification_masses, mod_bounds)
+
+
     for final_index = 1:length(objects),
         segments_left = 0:segments,
-        free_cysteines = 0:sum(o -> o.cysteines, objects)
+        free_cysteines = 0:sum(o -> o.cysteines, objects),
+        (modname, mod) in modifiers
 
-        final_step = (final_index, alkylation_mass * free_cysteines, segments_left, free_cysteines)
+        final_step = (final_index, alkylation_mass * free_cysteines + mod, segments_left, free_cysteines)
         if final_step in keys(table)
             if segments_left >= 6
                 println(final_step)
             end
             sols = walk!(table, table[final_step], [final_index], [])
-            append!(solutions, [(segments_left, free_cysteines, s) for s in sols])
+            append!(solutions, [(segments_left, free_cysteines, modname, s) for s in sols])
         end
     end
     solutions
