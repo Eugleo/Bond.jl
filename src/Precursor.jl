@@ -1,44 +1,49 @@
 module Precursor
 
 using DataFrames
-using OrderedCollections
 
 include("Mass.jl")
 include("Types.jl")
 
 using .Mass, .Types
 
-function try_stepping!(objects, table; from, to, bond)
-    if to in keys(table)
-        next_parents = table[to]
-        if !isnothing(next_parents) && !(from in next_parents)
-            push!(table[to], from)
-        end
+function step!(objects, masses, transitions; from, to, bond)
+    if to in keys(transitions)
+        next_parents = transitions[to]
+        # if !isnothing(next_parents) && !(from in next_parents)
+            push!(transitions[to], from)
+        # end
     else
-        table[to] = isnothing(from) ? nothing : [from]
-        compute_step!(objects, table; to, bond)
+        transitions[to] = from[1] == 0 ? nothing : [from]
     end
+    compute_step!(objects, masses, transitions; from=to, bond)
 end
 
-function compute_step!(objects, table; to, bond)
-    index, remaining_mass, segment_budget, cysteines = to
-    if remaining_mass <= 0 || segment_budget < 0 || index >= length(objects)
-        return table
+function compute_step!(objects, weights, transitions; bond, from)
+    index, target, jumps_left, cysteines = from
+    is_first = index == 0
+    if target <= 0 || jumps_left < 0 || (!is_first && index >= length(objects))
+        return transitions
     end
 
-    maxskips = max(length(objects) - index - 1, 0)
-    for skip = 0:((segment_budget > 0 && cysteines > 0) ? maxskips : 0)
-        next = (index + 1) + skip
-        next_mass = remaining_mass - objects[next].approx_mass + (skip > 0) * bond
-        next_cysteines = cysteines + objects[next].cysteines - (skip > 0) * 2
-
-        if next_mass >= 0
-            next = (next, next_mass, segment_budget - (skip > 0), next_cysteines)
-            try_stepping!(objects, table; from = to, to = next, bond)
+    can_jump = is_first || (jumps_left > 0  && cysteines > 0)
+    max_jump_size = can_jump ? max(length(objects) - index - 1, 0) : 0
+    for skipped = 0:max_jump_size
+        jumped_with_bond = !is_first && skipped > 0
+        next_object = (index + 1) + skipped
+        new_target = target - weights[next_object] + jumped_with_bond * bond
+        if new_target >= 0
+            to = (
+                next_object,
+                new_target,
+                jumps_left - jumped_with_bond,
+                cysteines + objects[next_object].cysteines - jumped_with_bond * 2,
+            )
+            step!(objects, weights, transitions; from, to, bond)
         end
     end
 
-    table
+    transitions
 end
 
 function show_solutions(table, objects, segments, alkylation_mass, mods)
@@ -121,24 +126,21 @@ function walk!(table, parents, path, solutions)
     end
 end
 
-function subset_sum(digestides, target_mass, segments, sensitivity = 1000)
-    table = Dict{Tuple{Int,Int,Int,Int},Union{Vector{Tuple{Int,Int,Int,Int}},Nothing}}()
-    skips = 0:(segments > 0 ? max(length(digestides) - 1, 0) : 0)
+Step = Tuple{Int,Int,Int,Int}
 
-    h2o = approximate(mass("H2O"), sensitivity)
-    bond = -approximate(mass("H2"), sensitivity)
+function approximate(number, mult)
+    ceil(Int, mult * number)
+end
 
-    for skip in skips
-        next = skip + 1
-        next_mass = target_mass - digestides[next].approx_mass - h2o
+function subset_sum(objects, target, max_jumps, sensitivity = 1000)
+    println("HeyHoa")
+    transitions = Dict{Step,Union{Vector{Step},Nothing}}()
+    bond = approximate(mass("H2O") - mass("H2"), sensitivity)
+    masses = [approximate(d.mass, sensitivity) for d in objects]
+    from = (0, target - approximate(mass("H2O"), sensitivity), max_jumps, 0)
+    compute_step!(objects, masses, transitions; bond, from)
 
-        if next_mass >= 0
-            to = (next, next_mass, segments - 1, digestides[next].cysteines)
-            try_stepping!(digestides, table; from = nothing, to, bond + h2o)
-        end
-    end
-
-    table # walk(table, objects)
+    transitions # walk(table, objects)
 end
 
 # objects40 = map(

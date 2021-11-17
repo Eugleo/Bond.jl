@@ -2,6 +2,7 @@ module Types
 
 using FASTX
 include("Mass.jl")
+using .Mass: mass
 
 export load_protein, Peptide, digest, trypsin
 
@@ -11,9 +12,9 @@ struct Peptide
     cysteines::Int
 
     function Peptide(sequence)
-        ends = Mass.mass("H2") + Mass.mass("O")
-        mass_exact = sum(amino_acid -> AMINO_ACID_MASS[amino_acid], sequence) + ends
-        new(sequence, mass_exact, Base.count(aa -> aa == 'C', sequence))
+        ends = mass("H2") + mass("O")
+        mass = sum(amino_acid -> AMINO_ACID_MASS[amino_acid], sequence) + ends
+        new(sequence, mass, Base.count(aa -> aa == 'C', sequence))
     end
 end
 
